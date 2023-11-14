@@ -1,0 +1,29 @@
+[
+    {
+        "id": 1,
+        "title": "Nombre del Producto 1",
+        "description": "Descripción del Producto 1",
+        "price": 100.00,
+        "thumbnail": "url_de_la_imagen_1.jpg",
+        "code": "P001",
+        "stock": 10
+    },
+    {
+        "id": 2,
+        "title": "Nombre del Producto 2",
+        "description": "Descripción del Producto 2",
+        "price": 150.00,
+        "thumbnail": "url_de_la_imagen_2.jpg",
+        "code": "P002",
+        "stock": 5
+    },
+    {
+        "id": 3,
+        "title": "Nombre del Producto 3",
+        "description": "Descripción del Producto 3",
+        "price": 200.00,
+        "thumbnail": "url_de_la_imagen_3.jpg",
+        "code": "P003",
+        "stock": 8
+    }
+]
