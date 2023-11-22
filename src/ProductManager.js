@@ -5,17 +5,17 @@ class ProductManager {
         this.path = filePath;
         this.products = [];
         this.productIdCounter = 1;
-        
+
         this.loadProducts().catch(error => {
             console.error('Error al cargar los productos:', error);
         });
     }
 
     async addProduct(title, description, price, thumbnail, code, stock) {
-        if (!title || !description || !price || !thumbnail || !code || !stock) {
-            console.log("Todos los campos son obligatorios, no se agregó el producto");
+        if (!title || !description || !price || !code || !stock) {
+            console.log("Todos los campos son obligatorios excepto thumbnails");
             const existingProduct = this.products.some(product => product.code === code);
-
+    
             if (existingProduct) {
                 console.log("Ya existe un producto con el mismo código. No se ha agregado el producto.");
                 return;
@@ -24,7 +24,7 @@ class ProductManager {
         }
 
         const newProduct = {
-            id: this.productIdCounter++,
+            id: this.generateUniqueId(),
             title,
             description,
             price,
@@ -36,6 +36,13 @@ class ProductManager {
         this.products.push(newProduct);
         await this.saveProducts();
     }
+
+    generateUniqueId() {
+        const timestamp = Date.now().toString(); // Usar el timestamp actual
+        const newId = `${timestamp}-${this.productIdCounter++}`;
+        return newId;
+    }
+
 
     getProducts() {
         return this.products;
@@ -51,7 +58,6 @@ class ProductManager {
             return null;
         }
     }
-    
 
     async updateProduct(id, updateProduct) {
         const productIndex = this.products.findIndex(product => product.id === id);
