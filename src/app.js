@@ -1,11 +1,10 @@
-import express from "express";
-import { Server } from "socket.io";
-import handlebars from "express-handlebars";
-import { __dirname } from "./dirname.js";
+import express from 'express';
+import { Server } from 'socket.io';
+import handlebars from 'express-handlebars';
+import path from 'path';
+import DBManager from './dbManager.js';
 import productsRouter from './routes/products.router.js';
 import cartsRouter from './routes/carts.router.js';
-import viewsRouter from "./routes/views.routs.js"
-import ProductManager from "./ProductManager.js";
 
 const app = express();
 const PORT = 5000;
@@ -19,20 +18,27 @@ const io = new Server(httpServer);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Handlebars config
+// Conexión a la base de datos
+DBManager.connect();
+
+// Configuración de Handlebars y vistas
 app.engine(
-  "hbs",
-  handlebars.engine({
-    extname: ".hbs",
-    defaultLayout: "main",
+  'hbs',
+  handlebars({
+    extname: '.hbs',
+    defaultLayout: 'main',
   })
 );
 
-app.set("view engine", "hbs");
-app.set("views", `${__dirname}/views`);
+app.set('view engine', 'hbs');
+app.set('views', path.join(__dirname, '/views'));
 
-// Public
-app.use(express.static(`${__dirname}/public`));
+// Rutas de productos y carritos
+app.use('/api/products', productsRouter);
+app.use('/api/carts', cartsRouter);
+
+// Directorio público
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Rutas de productos y carritos
 app.use('/api/products', productsRouter);
@@ -61,7 +67,6 @@ io.on('connection', (socket) => {
     io.emit('updateProducts', updatedProducts);
   });
 
-  // Otros eventos de socket pueden ir aquí
 });
 
-// ... (código posterior)
+
