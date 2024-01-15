@@ -1,71 +1,179 @@
-// routes/carts.router.js
-import express from 'express';
-import Cart from '../models/cart.model.js';
-import Product from '../models/product.model.js';
+import { Router } from "express";
+import cartsDao from "../daos/carts.dao.js";
+import productsDao from "../daos/products.dao.js";
 
-const cartsRouter = express.Router();
+const router = Router();
 
-// Ruta para obtener todos los carritos
-cartsRouter.get('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const carts = await Cart.find().populate('products.product'); // Utiliza populate para traer los productos completos
-    res.json(carts);
+    const newCart = await cartsDao.createCart();
+    res.json({ newCartId: newCart._id });
   } catch (error) {
-    console.error('Error al obtener todos los carritos:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error creating a new cart:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Ruta para obtener un carrito por ID
-cartsRouter.get('/:cid', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const cartId = req.params.cid;
-    const cart = await Cart.findById(cartId).populate('products.product'); // Utiliza populate para traer los productos completos
+    const cartsToRender = await cartsDao.getAllCarts();
+    console.log(cartsToRender);
 
-    if (!cart) {
-      res.status(404).json({ error: 'Cart not found' });
-      return;
-    }
+    const cartIds = cartsToRender.map(cart => cart._id);
 
-    res.json(cart);
+    res.json({ cartIds });
   } catch (error) {
-    console.error('Error al obtener un carrito por ID:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting all carts:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// Ruta para agregar un producto a un carrito específico
-cartsRouter.post('/:cid/product/:pid', async (req, res) => {
+router.get("/:cid", async (req, res) => {
   try {
-    const cartId = req.params.cid;
-    const productId = req.params.pid;
-    const quantity = req.body.quantity || 1;
+    const { cid } = req.params;
+    const cartWithProducts = await cartsDao.getProductsFromCart(cid);
 
-    const cart = await Cart.findById(cartId);
-
-    if (!cart) {
-      res.status(404).json({ error: 'Cart not found' });
-      return;
-    }
-
-    const product = await Product.findById(productId);
-
-    if (!product) {
-      res.status(404).json({ error: 'Product not found' });
-      return;
-    }
-
-    // Agregar el producto al carrito
-    cart.products.push({ product: productId, quantity });
-    await cart.save();
-
-    res.json(cart);
+    res.json(cartWithProducts);
+    console.log(cartWithProducts);
   } catch (error) {
-    console.error('Error al agregar un producto al carrito:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error("Error getting cart with products:", error);
+    res.status(500).json({ error: "Internal Server Error." });
   }
 });
 
-// ... Puedes agregar más rutas según tus necesidades
+router.delete("/:cid", async (req, res) => {
+  try {
+    const { cid } = req.params;
+    const deletedCart = await cartsDao.getCartById(cid);
+    deletedCart.products = [];
 
-export default cartsRouter;
+    let updatedCart = await cartsDao.updateCart(cid, deletedCart);
+    res.json(updatedCart);
+    console.log(updatedCart);
+  } catch (error) {
+    console.error("Error getting cart with products:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+router.delete("/:cid/products/:pid", async (req, res) => {
+  try {
+    const { cid, pid } = req.params;
+    const productId = pid;
+    const quantity = req.body.quantity;
+    const cartId = cid;
+
+    const cart = await cartsDao.getCartById(cartId);
+
+    if (cart) {
+      const product = await productsDao.getProductById(productId);
+
+      if (product) {
+        const index = cart.products.findIndex((item) =>
+          item.product.equals(productId)
+        );
+
+        if (index !== 1) {
+          cart.products[index].quantity -= 1;
+        } else {
+          cart.products.splice(index, 1);
+        }
+
+        const response = await cartsDao.updateCart(cartId, cart);
+
+        res.status(200).json({ response: "OK", message: response });
+      } else {
+        res.status(404).json({ error: "Product not found." });
+      }
+    } else {
+      res.status(404).json({ error: "Cart not found." });
+    }
+  } catch (error) {
+    console.error("Error adding product to cart:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+router.post("/:cid/products/:pid", async (req, res) => {
+  try {
+    const { cid, pid } = req.params;
+    const productId = pid;
+    const quantity = req.body.quantity;
+    const cartId = cid;
+
+    const cart = await cartsDao.getCartById(cartId);
+
+    if (cart) {
+      const product = await productsDao.getProductById(productId);
+
+      if (product) {
+        const index = cart.products.findIndex((item) =>
+          item.product.equals(productId)
+        );
+
+        if (index !== -1) {
+          cart.products[index].quantity += 1;
+        } else {
+          cart.products.push({ product: productId, quantity: quantity });
+        }
+
+        const response = await cartsDao.updateCart(cartId, cart);
+
+        res.status(200).json({ response: "OK", message: response });
+      } else {
+        res.status(404).json({ error: "Product not found." });
+      }
+    } else {
+      res.status(404).json({ error: "Cart not found." });
+    }
+  } catch (error) {
+    console.error("Error adding product to cart:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+router.put("/:cid", async (req, res) => {
+  try {
+    const cid = req.params.cid;
+    const cart = await cartsDao.getCartById(cid);
+    const products = req.body;
+
+    products.forEach((e) => {
+      const index = cart.products.findIndex((item) => item.product.equals(cid));
+      if (index != -1) {
+        cart.products[index].quantity += e.quantity;
+      } else {
+        cart.products.push({ product: e._id, quantity: e.quantity });
+      }
+    });
+  } catch (error) {
+    console.error("Error modifiying products in cart:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+router.put("/:cid/products/:pid", async (req, res) => {
+  try {
+    const cid = req.params.cid;
+    const pid = req.params.pid;
+    const cart = await cartsDao.getCartById(cid);
+    const product = await productsDao.getProductById(pid);
+
+    const index = cart.products.findIndex((item) => item.product.equals(pid));
+
+    if (index !== -1) {
+      cart.products[index].quantity += req.body.quantity;
+    } else {
+      cart.products.push({ product: pid, quantity: req.body.quantity });
+    }
+
+    const updatedCart = await cartsDao.updateCart(cid, cart);
+
+    res.status(200).json({ response: "OK", cart: updatedCart });
+  } catch (error) {
+    console.error("Error modifying products in cart:", error);
+    res.status(500).json({ error: "Internal Server Error." });
+  }
+});
+
+export default router;
