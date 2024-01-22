@@ -6,7 +6,7 @@ import chatRouter from "./routes/chat.router.js";
 import handlebars from "express-handlebars";
 import sessionsRouter from "./routes/sessions.router.js";
 import usersViewRouter from "./routes/users.views.router.js";
-import __dirname from "./dirname.js";
+import __dirname from "./utils.js";
 import { Server } from "socket.io";
 import { allowInsecurePrototypeAccess } from "@handlebars/allow-prototype-access";
 import mongoose from "mongoose";
@@ -15,6 +15,8 @@ import "dotenv/config";
 import dotenv from "dotenv";
 import session from "express-session";
 import MongoStore from "connect-mongo";
+import passport from "passport";
+import initializePassport from "./config/passport.config.js";
 dotenv.config();
 
 const app = express();
@@ -27,7 +29,7 @@ app.use(
     store: MongoStore.create({
       mongoUrl: MONGODB_URI,
       mongoOptions: { useNewUrlParser: true, useUnifiedTopology: true },
-      ttl:60,
+      ttl: 60,
     }),
 
     secret: "coderS3cr3t",
@@ -47,6 +49,10 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (request, response) => {
   response.send("<h1> Bienvenidos al servidor.</h1>");
 });
+
+initializePassport();
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
